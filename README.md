@@ -1,9 +1,4 @@
-# RAFT
-This repository contains the source code for our paper:
-
-[RAFT: Recurrent All Pairs Field Transforms for Optical Flow](https://arxiv.org/pdf/2003.12039.pdf)<br/>
-ECCV 2020 <br/>
-Zachary Teed and Jia Deng<br/>
+# DRAFT
 
 <img src="RAFT.png">
 
@@ -62,19 +57,5 @@ python evaluate.py --model=models/raft-things.pth --dataset=sintel --mixed_preci
 ```
 
 ## Training
-We used the following training schedule in our paper (2 GPUs). Training logs will be written to the `runs` which can be visualized using tensorboard
-```Shell
-./train_standard.sh
-```
+In progress
 
-If you have a RTX GPU, training can be accelerated using mixed precision. You can expect similiar results in this setting (1 GPU)
-```Shell
-./train_mixed.sh
-```
-
-## (Optional) Efficent Implementation
-You can optionally use our alternate (efficent) implementation by compiling the provided cuda extension
-```Shell
-cd alt_cuda_corr && python setup.py install && cd ..
-```
-and running `demo.py` and `evaluate.py` with the `--alternate_corr` flag Note, this implementation is somewhat slower than all-pairs, but uses significantly less GPU memory during the forward pass.
