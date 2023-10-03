@@ -119,7 +119,7 @@ class MpiSintel(FlowDataset):
 
 
 class FlyingChairs(FlowDataset):
-    def __init__(self, aug_params=None, split='train', root='../dataset/FlyingChairs_release/data'):
+    def __init__(self, aug_params=None, split='train', root='../dataset/FlyingChairs2'):
         super(FlyingChairs, self).__init__(aug_params)
 
         images = sorted(glob(osp.join(root, '*.ppm')))
@@ -135,7 +135,7 @@ class FlyingChairs(FlowDataset):
 
 
 class FlyingThings3D(FlowDataset):
-    def __init__(self, aug_params=None, root='../dataset/Sampler/FlyingThings3D', dstype='frames_cleanpass'):
+    def __init__(self, aug_params=None, root='../dataset/FlyingThings3D', dstype='frames_cleanpass'):
         super(FlyingThings3D, self).__init__(aug_params)
 
         for cam in ['left']:
@@ -159,7 +159,7 @@ class FlyingThings3D(FlowDataset):
       
 
 class KITTI(FlowDataset):
-    def __init__(self, aug_params=None, split='training', root='../dataset/KITTI/data_scene_flow'):
+    def __init__(self, aug_params=None, split='training', root='../dataset/kitti_scene_flow'):
         super(KITTI, self).__init__(aug_params, sparse=True)
         if split == 'testing':
             self.is_test = True
@@ -197,7 +197,7 @@ class HD1K(FlowDataset):
 
 
 def fetch_dataloader(args, TRAIN_DS='C+T+K+S+H'):
-    """ Create the data loader for the corresponding trainign set """
+    """ Create the data loader for the corresponding training set """
 
     if args.stage == 'chairs':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.1, 'max_scale': 1.0, 'do_flip': True}
@@ -209,7 +209,7 @@ def fetch_dataloader(args, TRAIN_DS='C+T+K+S+H'):
         final_dataset = FlyingThings3D(aug_params, dstype='frames_finalpass')
         train_dataset = clean_dataset + final_dataset
 
-    elif args.stage == '../dataset/sintel':
+    elif args.stage == 'sintel':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.6, 'do_flip': True}
         things = FlyingThings3D(aug_params, dstype='frames_cleanpass')
         sintel_clean = MpiSintel(aug_params, split='training', dstype='clean')
@@ -223,7 +223,7 @@ def fetch_dataloader(args, TRAIN_DS='C+T+K+S+H'):
         elif TRAIN_DS == 'C+T+K/S':
             train_dataset = 100*sintel_clean + 100*sintel_final + things
 
-    elif args.stage == '../dataset/KITTI/data_scene_flow':
+    elif args.stage == 'kitti':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.4, 'do_flip': False}
         train_dataset = KITTI(aug_params, split='training')
     print(f"TESTING OUTPUT ========{train_dataset}")

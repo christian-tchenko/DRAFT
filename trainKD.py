@@ -278,7 +278,7 @@ if __name__ == '__main__':
     # Setup student
     
     parser.add_argument('--name', default='raft', help="name your experiment")
-    parser.add_argument('--stage', default='chairs', help="determines which dataset to use for training") 
+    parser.add_argument('--stage', default='kitti', help="determines which dataset to use for training") 
     parser.add_argument('--restore_ckpt', help="restore checkpoint")
     parser.add_argument('--nature', default='small', help='use small model')
     parser.add_argument('--distilltype', default='rskd', help='choose distillation type')
@@ -286,7 +286,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--lr', type=float, default=0.00001)
     parser.add_argument('--num_steps', type=int, default=50000)
-    parser.add_argument('--batch_size', type=int, default=1) # Normal =6
+    parser.add_argument('--batch_size', type=int,default=4) # Normal =6
     parser.add_argument('--image_size', type=int, nargs='+', default=[288, 960])
     #parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
 

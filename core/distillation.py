@@ -50,7 +50,7 @@ class DistillerIKD:
         loss=0
         for i in range(len(s)):
             loss += kl_divergence((s[i]), t[i])*self.temperature
-        return loss
+        return loss/len(s)
 
     #---------------------------------------------------#
     #   feature based hint. 
@@ -61,7 +61,7 @@ class DistillerIKD:
         loss=0
         for i in range(len(s)):
             loss += torch.linalg.norm( torch.sub(s[i], t[i]) , ord=self.dim)
-        return loss
+        return loss/len(s)
 
 #---------------------------------------------------#
 #   Relational hint
