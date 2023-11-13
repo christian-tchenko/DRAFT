@@ -25,9 +25,6 @@ from adaptation import *
 from datetime import datetime
 import csv
 
-# OPEN:  
-## TODO: 
-
 try:
     from torch.cuda.amp import GradScaler
 except:
@@ -51,20 +48,42 @@ SUM_FREQ = 100
 VAL_FREQ = 5000
 
 
-def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=MAX_FLOW):
+def sequence_loss(flow_preds, flow_gt, valid, flow_predictions_teacher,corr_mat, corr_mat_teacher, fkd_loss=0, gamma=0.8, alpha=0.1, max_flow=MAX_FLOW):
     """ Loss function defined over sequence of flow predictions """
 
     n_predictions = len(flow_preds)    
     flow_loss = 0.0
+    rskd_loss = 0.0
+    mkd_loss = 0.0
+    a, b, c = 3*alpha/5, alpha/5, alpha/5
+    
 
     # exlude invalid pixels and extremely large diplacements
     mag = torch.sum(flow_gt**2, dim=1).sqrt()
     valid = (valid >= 0.5) & (mag < max_flow)
 
+
     for i in range(n_predictions):
+
+        #---------------------------------------------------#
+        #   Adapt
+        #---------------------------------------------------# 
+        t = adapter() 
+        distiller = DistillerMKD()
+        _sgn, _ = t.signspatternmatrix(flow_predictions_teacher[i],flow_preds[i].size(1))
+        sgn, _ = t.signspatternmatrix(flow_preds[i],flow_preds[i].size(1))
+
+        _sgn_corr, _ = t.signspatternmatrix(corr_mat_teacher[i],corr_mat[i].size(1))
+        sgn_corr, _ = t.signspatternmatrix(corr_mat[i],corr_mat[i].size(1))
+
+        corri_loss = distiller.KL_loss(sgn_corr, _sgn_corr)
+        di_loss = distiller.KL_loss(sgn, _sgn) #+ distiller.KL_loss(inertia, _inertia) 
+
         i_weight = gamma**(n_predictions - i - 1)
         i_loss = (flow_preds[i] - flow_gt).abs()
         flow_loss += i_weight * (valid[:, None] * i_loss).mean()
+        rskd_loss += i_weight * (valid[:, None] * ((1-alpha)*i_loss + alpha*di_loss)).mean()
+        mkd_loss += i_weight * (valid[:, None] * ((1-alpha)*i_loss + c*fkd_loss + b*corri_loss + a*di_loss)).mean()
 
     epe = torch.sum((flow_preds[-1] - flow_gt)**2, dim=1).sqrt()
     epe = epe.view(-1)[valid.view(-1)]
@@ -76,7 +95,7 @@ def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=MAX_FLOW):
         '5px': (epe < 5).float().mean().item(),
     }
 
-    return flow_loss, metrics
+    return flow_loss, metrics, rskd_loss, mkd_loss
 
 
 def count_parameters(model):
@@ -173,10 +192,8 @@ def train(args, teachermodel):
 
     should_keep_training = True
     while should_keep_training:
-        temperature = args.temperature
+        #temperature = args.temperature
         distilltype = args.distilltype
-        alpha =  args.alpha
-        l = args.norm
         counter = 0
         
 
@@ -185,11 +202,6 @@ def train(args, teachermodel):
 
         for i_batch, data_blob in enumerate(train_loader):
             optimizer.zero_grad()
-            distillation_loss = 0 
-            logit_loss = 0
-            correlation_loss = 0
-            studentloss =0
-            a, b, c = 3*alpha/5, alpha/5, alpha/5
 
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
 
@@ -201,75 +213,51 @@ def train(args, teachermodel):
             flow_predictions,  corr_mat, fm1, fm2 = model(image1, image2, iters=args.iters) 
             flow_predictions_teacher,  corr_mat_teacher, fm1_teacher, fm2_teacher = teachermodel(image1, image2, iters=args.iters)  
 
-            if distilltype == 'rskd':
-                for j in range(len(flow_predictions_teacher)):
+            t = adapter()
+            _sgn_fm1, _inertia1 = t.signspatternmatrix(fm1_teacher,fm1.size(1))
+            sgn_fm1, inertia1 = t.signspatternmatrix(fm1,fm1.size(1))
+            fm1_loss = distiller.RE_loss(sgn_fm1, _sgn_fm1) + distiller.KL_loss(inertia1, _inertia1)
 
-                    #---------------------------------------------------#
-                    #   Sign Pattern Matrix
-                    #---------------------------------------------------# 
-                    _sgn, _ = adaptation.signspatternmatrix(flow_predictions_teacher[j],flow_predictions[j].size(1))
-                    sgn, _ = adaptation.signspatternmatrix(flow_predictions[j],flow_predictions[j].size(1))
+            _sgn_fm2, _inertia2 = adaptation.signspatternmatrix(fm2_teacher,fm2.size(1))
+            sgn_fm2, inertia2 = adaptation.signspatternmatrix(fm2,fm2.size(1))
+            fm2_loss = distiller.RE_loss(sgn_fm2, _sgn_fm2) + distiller.KL_loss(inertia2, _inertia2)
+            fkd_loss = (fm2_loss+fm1_loss).mean()
 
-                    d = distiller.KL_loss(sgn, _sgn) #+ distiller.KL_loss(inertia, _inertia) 
-                    distillation_loss += d
-                loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma)
-                studentloss = loss
-                loss = (1-alpha)*loss + alpha*(distillation_loss)
-                print(f'epoch, test:{epoch}, {counter + 1}, RsKD: {distillation_loss} ======= Student Loss: {studentloss}====== General Loss {loss}')
+            studentloss, metrics, rskd_loss, mkd_loss = sequence_loss(flow_predictions, flow, valid, flow_predictions_teacher, corr_mat, corr_mat_teacher, fkd_loss, args.gamma, args.alpha)
+
+            if distilltype=="rskd":
+                print(f'RsKD === step: {counter + 1}== normal Loss {studentloss}====== distiation Loss {rskd_loss} === metrics:{metrics}')
+                loss = rskd_loss
 
                 with open("loss_rskd.csv", "a") as file:
                     csvreader = csv.reader(file)
                     writer = csv.writer(file)
 
                     if epoch==0 and counter ==0:
-                        writer.writerow(["date", "epoch", "student Loss", "final Loss", "Distillation Loss"])
+                        writer.writerow(["date", "epoch", "normal Loss", "final Loss"])
                     
-                    writer.writerow([datetime.now(), epoch, studentloss.float(), loss, distillation_losss])
+                    writer.writerow([datetime.now(), epoch, studentloss.float(), loss.float])
                 counter +=1
 
-            elif distilltype == 'mkd':
-                for j in range(len(flow_predictions_teacher)):
+            elif distilltype=="mkd":
+                print(f'MKD === step: {counter + 1}== normal Loss {studentloss}====== distiation Loss {mkd_loss} === metrics:{metrics}')
+                loss = rskd_loss
 
-                    #---------------------------------------------------#
-                    #   Adaption
-                    #---------------------------------------------------# 
-                    _sgn, _ = adaptation.signspatternmatrix(flow_predictions_teacher[j],flow_predictions[j].size(1))
-                    sgn, _ = adaptation.signspatternmatrix(flow_predictions[j],flow_predictions[j].size(1))
-
-                    _sgn_corr, _ = adaptation.signspatternmatrix(corr_mat_teacher[j],corr_mat[j].size(1))
-                    sgn_corr, _ = adaptation.signspatternmatrix(corr_mat[j],corr_mat[j].size(1))
-                    logit_loss += distiller.KL_loss(sgn, _sgn)
-                    correlation_loss += distiller.KL_loss(sgn_corr, _sgn_corr) 
-
-                _sgn_fm1, _inertia1 = adaptation.signspatternmatrix(fm1_teacher,fm1.size(1))
-                sgn_fm1, inertia1 = adaptation.signspatternmatrix(fm1,fm1.size(1))
-                fm1_loss = distiller.RE_loss(sgn_fm1, _sgn_fm1) + distiller.KL_loss(inertia1, _inertia1)
-
-                _sgn_fm2, _inertia2 = adaptation.signspatternmatrix(fm2_teacher,fm2.size(1))
-                sgn_fm2, inertia2 = adaptation.signspatternmatrix(fm2,fm2.size(1))
-                fm2_loss = distiller.RE_loss(sgn_fm2, _sgn_fm2) + distiller.KL_loss(inertia2, _inertia2)
-                
-                loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma)
-                studentloss = loss
-
-                loss = (1-alpha)*loss + a*logit_loss + b*correlation_loss + c*(fm2_loss+fm1_loss)  
-                print(f'MKD === step: {counter + 1},logit Loss: {a*logit_loss} ====== hint Loss: {c*(fm2_loss+fm1_loss) } ======= corr Loss: {b*correlation_loss}====== student Loss {studentloss}====== General Loss {loss}')
-                
-
-                #---------------------------------------------------#
-                #   Save losses
-                #---------------------------------------------------# 
                 with open("loss_mkd.csv", "a") as file:
                     csvreader = csv.reader(file)
                     writer = csv.writer(file)
 
                     if epoch==0 and counter ==0:
-                        writer.writerow(["date", "epoch", "student Loss", "final Loss", "logit Loss", "Hint Loss", "corr Loss"])
+                        writer.writerow(["date", "epoch", "normal Loss", "final Loss"])
                     
-                    writer.writerow([datetime.now(), epoch, studentloss.float(), loss, logit_loss, fm2_loss+fm1_loss, correlation_loss])
+                    writer.writerow([datetime.now(), epoch, studentloss.float(), loss])
                 counter +=1
 
-            
+            else:
+                print(f'No distill === step: {counter + 1} === metrics:{metrics}== normal Loss {studentloss}')
+                loss = studentloss
+                counter +=1
+
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)                
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
@@ -341,7 +329,7 @@ if __name__ == '__main__':
     parser.add_argument('--epsilon', type=float, default=1e-8)
     parser.add_argument('--clip', type=float, default=1.0)
     parser.add_argument('--dropout', type=float, default=0.0)
-    parser.add_argument('--alpha', type=float, default=0.002)
+    parser.add_argument('--alpha', type=float, default=0.1)
     parser.add_argument('--gamma', type=float, default=0.8, help='exponential weighting')
     parser.add_argument('--add_noise', action='store_true')
 
