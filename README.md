@@ -15,7 +15,7 @@ Pretrained models can be downloaded by running
 ```Shell
 ./download_models.sh
 ```
-or downloaded from [google drive](https://drive.google.com/drive/folders/1sWDsfuZ3Up38EUQt7-JDTT1HcGHuJgvT?usp=sharing)
+or downloaded from [google drive](https://drive.google.com/drive/folders/1akKiGueJXtsCg7lcViWoeRO7UHKf7Nra?usp=sharing)
 
 You can demo a trained model on a sequence of frames
 ```Shell
