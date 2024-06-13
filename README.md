@@ -57,5 +57,7 @@ python evaluate.py --model=models/Draft-things.pth --dataset=sintel --mixed_prec
 ```
 
 ## Training
-In progress
-
+You can train the model using `trainKD.py`
+```shell
+python3 -u trainKD.py  --model models/raft-kitti.pth
+```
