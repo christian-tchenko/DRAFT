@@ -11,9 +11,9 @@ conda install pytorch=3.7.16 torchvision=1.13.1+cu117 cudatoolkit=11.6 matplotli
 ```
 
 ## Demos
-Pretrained models can be downloaded by running
+Pretrained models can be downloaded using
 ```Shell
-./download_models.sh
+./get_models.sh
 ```
 or downloaded from [google drive](https://drive.google.com/drive/folders/1akKiGueJXtsCg7lcViWoeRO7UHKf7Nra?usp=sharing)
 
@@ -57,7 +57,7 @@ python evaluate.py --model=models/Draft-things.pth --dataset=sintel --mixed_prec
 ```
 
 ## Training
-You can train the model using `trainKD.py`
+You can train the model using `trainKD.py`, where `model` describes the teacher model
 ```shell
 python3 -u trainKD.py  --model models/raft-kitti.pth
 ```
