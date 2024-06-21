@@ -3,11 +3,11 @@
 <img src="DRAFT.png">
 
 ## Requirements
-The code has been tested with PyTorch 1.6 and Cuda 10.1.
+The code has been tested with PyTorch 3.7.16 and Cuda 11.6.
 ```Shell
 conda create --name Draft
 conda activate Draft
-conda install pytorch=1.6.0 torchvision=0.7.0 cudatoolkit=10.1 matplotlib tensorboard scipy opencv -c pytorch
+conda install pytorch=3.7.16 torchvision=1.13.1+cu117 cudatoolkit=11.6 matplotlib tensorboard scipy opencv -c pytorch
 ```
 
 ## Demos
