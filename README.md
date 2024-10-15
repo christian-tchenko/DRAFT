@@ -1,6 +1,6 @@
 # DRAFT - Distilled Recurrent All-Pairs Field Transforms for Optical Flow
 
-Conference paper: [View manuscript]([10.1109/ICIP51287.2024.10648058](https://ieeexplore.ieee.org/document/10648058)).
+Conference paper: [View manuscript](https://ieeexplore.ieee.org/document/10648058).
 
 Published in: 2024 IEEE International Conference on Image Processing (ICIP).
 
