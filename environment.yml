@@ -1,4 +1,4 @@
-name: draft
+name: DRAFT
 channels:
   - pytorch
   - defaults
@@ -183,4 +183,4 @@ dependencies:
       - tqdm==4.66.4
       - wcwidth==0.2.13
       - yacs==0.1.8
-prefix: /home/christian-tcchenko/anaconda3/envs/raft
+
