@@ -7,24 +7,18 @@ Published in: 2024 IEEE International Conference on Image Processing (ICIP).
 
 <img src="DRAFT.png">
 
-## Requirements
-The code has been tested with PyTorch 3.7.16 and Cuda 11.6.
+## Requirements - create environment
 ```Shell
-conda create --name Draft
-conda activate Draft
-conda install pytorch=3.7.16 torchvision=1.13.1+cu117 cudatoolkit=11.6 matplotlib tensorboard scipy opencv -c pytorch
-```
+conda env create -f environment.yml
+```Shell
+./get_models.sh## Demos
 
-## Demos
-Pretrained models can be downloaded using
-```Shell
-./get_models.sh
 ```
 or downloaded from [google drive](https://drive.google.com/drive/folders/1akKiGueJXtsCg7lcViWoeRO7UHKf7Nra?usp=sharing)
 
 You can demo a trained model on a sequence of frames
 ```Shell
-python demo.py --model=models/Draft-things.pth --path=demo-frames --small
+python demo.py --model=models/DRAFT-things.pth --path=demo-frames --small
 ```
 
 ## Required Data

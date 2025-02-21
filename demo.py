@@ -16,12 +16,13 @@ from utils.utils import InputPadder
 
 
 
-DEVICE = 'cuda'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def load_image(imfile):
     img = np.array(Image.open(imfile)).astype(np.uint8)
     img = torch.from_numpy(img).permute(2, 0, 1).float()
-    return img[None].to(DEVICE)
+    return img[None].to(DEVICE)  # Now adapts to CPU or CUDA
+
 
 
 def viz(img, flo):
@@ -32,22 +33,17 @@ def viz(img, flo):
     flo = flow_viz.flow_to_image(flo)
     img_flo = np.concatenate([img, flo], axis=0)
 
-    # import matplotlib.pyplot as plt
-    # plt.imshow(img_flo / 255.0)
-    # plt.show()
 
     cv2.imshow('image', img_flo[:, :, [2,1,0]]/255.0)
     cv2.waitKey()
 
 
 def demo(args):
-    #model = torch.nn.DataParallel(RAFT(args))
     model = nn.DataParallel(RAFT(args), device_ids=args.gpus)
-    #model = torch.nn.DataParallel(RAFT(args), device_ids=args.gpus)
-    model.load_state_dict(torch.load(args.model))
+    model.load_state_dict(torch.load(args.model, map_location=torch.device('cpu')), strict=False)
+    # model.load_state_dict(torch.load(args.model))
 
     model = model.module
-    #model.to(DEVICE)
     model.eval()
 
     with torch.no_grad():
@@ -61,7 +57,7 @@ def demo(args):
 
             padder = InputPadder(image1.shape)
             image1, image2 = padder.pad(image1, image2)
-            print(F"TEST OUTPUT ======= {imfile1}")
+    
 
             flow_low, flow_up = model(image1, image2, iters=20, test_mode=True)
             

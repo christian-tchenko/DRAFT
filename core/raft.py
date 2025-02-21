@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from update import BasicUpdateBlock, SmallUpdateBlock
-from extractorKD import BasicEncoder, SmallEncoder
+from extractor import BasicEncoder, SmallEncoder
 from corr import CorrBlock, AlternateCorrBlock
 from utils.utils import bilinear_sampler, coords_grid, upflow8
 
@@ -22,12 +22,11 @@ except:
 
 
 class RAFT(nn.Module):
-    def __init__(self, args, nature = "basic"):
+    def __init__(self, args):
         super(RAFT, self).__init__()
         self.args = args
-        self.nature = nature
 
-        if nature == "small":
+        if args.small:
             self.hidden_dim = hdim = 96
             self.context_dim = cdim = 64
             args.corr_levels = 4
@@ -46,7 +45,7 @@ class RAFT(nn.Module):
             self.args.alternate_corr = False
 
         # feature network, context network, and update block
-        if nature == "small":
+        if args.small:
             self.fnet = SmallEncoder(output_dim=128, norm_fn='instance', dropout=args.dropout)        
             self.cnet = SmallEncoder(output_dim=hdim+cdim, norm_fn='none', dropout=args.dropout)
             self.update_block = SmallUpdateBlock(self.args, hidden_dim=hdim)
@@ -55,6 +54,8 @@ class RAFT(nn.Module):
             self.fnet = BasicEncoder(output_dim=256, norm_fn='instance', dropout=args.dropout)        
             self.cnet = BasicEncoder(output_dim=hdim+cdim, norm_fn='batch', dropout=args.dropout)
             self.update_block = BasicUpdateBlock(self.args, hidden_dim=hdim)
+        
+        #print(self.fnet, self.cnet, self.update_block)
 
     def freeze_bn(self):
         for m in self.modules():
@@ -102,6 +103,9 @@ class RAFT(nn.Module):
         
         fmap1 = fmap1.float()
         fmap2 = fmap2.float()
+
+        #print(f"TEST OUTPUT fmap1 =====  {fmap1.shape}")
+        #print(f"TEST OUTPUT fmap1 =====  {fmap2.shape}")
         if self.args.alternate_corr:
             corr_fn = AlternateCorrBlock(fmap1, fmap2, radius=self.args.corr_radius)
         else:
@@ -113,33 +117,36 @@ class RAFT(nn.Module):
             net, inp = torch.split(cnet, [hdim, cdim], dim=1)
             net = torch.tanh(net)
             inp = torch.relu(inp)
-
-        coords0, coords1 = self.initialize_flow(image1)
         
+        coords0, coords1 = self.initialize_flow(image1)
 
         if flow_init is not None:
             coords1 = coords1 + flow_init
 
         flow_predictions = []
-        corr_mat =[]
         for itr in range(iters):
             coords1 = coords1.detach()
-            corr = corr_fn(coords1)
+            corr = corr_fn(coords1) # index correlation volume
 
             flow = coords1 - coords0
             with autocast(enabled=self.args.mixed_precision):
                 net, up_mask, delta_flow = self.update_block(net, inp, corr, flow)
 
+            # F(t+1) = F(t) + \Delta(t)
             coords1 = coords1 + delta_flow
 
+            # upsample predictions
             if up_mask is None:
                 flow_up = upflow8(coords1 - coords0)
             else:
                 flow_up = self.upsample_flow(coords1 - coords0, up_mask)
             
             flow_predictions.append(flow_up)
-            corr_mat.append(corr)
 
         if test_mode:
-            return coords1 - coords0, flow_up        
-        return flow_predictions, corr_mat, fmap1, fmap2
+            return coords1 - coords0, flow_up
+        test = coords1-coords0
+        #print(f"TEST OUTPUT coord =====  {test.shape}")
+        #print(f"TEST OUTPUT flow up =====  {flow_up.shape}")  
+        print(f"Student pred, corr, fmap1, fmap2  ===== {fmap1, fmap2}")   
+        return flow_predictions
