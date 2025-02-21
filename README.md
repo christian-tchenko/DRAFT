@@ -10,6 +10,7 @@ Published in: 2024 IEEE International Conference on Image Processing (ICIP).
 ## Requirements - create environment
 ```Shell
 conda env create -f environment.yml # Create environment
+conda activate DRAFT
 ```
 ```Shell
 ./get_models.sh # Import models
