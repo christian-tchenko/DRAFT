@@ -9,10 +9,10 @@ Published in: 2024 IEEE International Conference on Image Processing (ICIP).
 
 ## Requirements - create environment
 ```Shell
-conda env create -f environment.yml
+conda env create -f environment.yml # Create environment
 ```
 ```Shell
-./get_models.sh## Demos
+./get_models.sh # Import models
 
 ```
 or downloaded from [google drive](https://drive.google.com/drive/folders/1akKiGueJXtsCg7lcViWoeRO7UHKf7Nra?usp=sharing)
