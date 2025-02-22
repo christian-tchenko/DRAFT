@@ -60,5 +60,10 @@ python evaluate.py --model=models/Draft-things.pth --dataset=sintel --mixed_prec
 ## Training
 You can train the model using `trainKD.py`, where `model` describes the teacher model
 ```shell
-python3 -u trainKD.py  --model models/raft-kitti.pth
+#!/bin/bash
+mkdir -p checkpoints
+python3 -u trainKD.py  --name raft-chairs --stage chairs --validation chairs --gpus 0 --num_steps 120000 --batch_size 8 --lr 0.00025 --image_size 368 496 --wdecay 0.0001 --model models/raft-kitti.pth 
+python3 -u trainKD.py  --name raft-things --stage things --validation sintel --restore_ckpt checkpoints/raft-chairs.pth --gpus 0 --num_steps 120000 --batch_size 5 --lr 0.0001 --image_size 400 720 --wdecay 0.0001 --model models/raft-kitti.pth
+python3 -u trainKD.py  --name raft-sintel --stage sintel --validation sintel --restore_ckpt checkpoints/raft-things.pth --gpus 0 --num_steps 120000 --batch_size 5 --lr 0.0001 --image_size 368 768 --wdecay 0.00001 --gamma=0.85 --model models/raft-kitti.pth
+python3 -u trainKD.py  --name raft-kitti  --stage kitti --validation kitti --restore_ckpt checkpoints/raft-sintel.pth --gpus 0 --num_steps 50000 --batch_size 5 --lr 0.0001 --image_size 288 960 --wdecay 0.00001 --gamma=0.85 --model models/raft-kitti.pth
 ```
