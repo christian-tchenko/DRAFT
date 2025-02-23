@@ -24,7 +24,7 @@ python demo.py --model=models/DRAFT-things.pth --path=demo-frames --small
 python demo.py --model=models/DRAFT-sintel.pth --path=demo-frames --small
 python demo.py --model=models/DRAFT-kitti.pth --path=demo-frames --small
 python demo.py --model=models/raft-small.pth --path=demo-frames --small
-python demo.py --model=models/raft.pth --path=demo-frames
+python demo.py --model=models/raft-kitti.pth --path=demo-frames
 ```
 
 ## Required Data
