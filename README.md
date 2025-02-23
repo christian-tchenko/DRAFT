@@ -18,9 +18,13 @@ conda activate DRAFT
 ```
 or downloaded from [google drive](https://drive.google.com/drive/folders/1akKiGueJXtsCg7lcViWoeRO7UHKf7Nra?usp=sharing)
 
-You can demo a trained model on a sequence of frames
+You can demo a trained model on a sequence of frames. Here some examples:
 ```Shell
 python demo.py --model=models/DRAFT-things.pth --path=demo-frames --small
+python demo.py --model=models/DRAFT-sintel.pth --path=demo-frames --small
+python demo.py --model=models/DRAFT-kitti.pth --path=demo-frames --small
+python demo.py --model=models/raft-small.pth --path=demo-frames --small
+python demo.py --model=models/raft.pth --path=demo-frames
 ```
 
 ## Required Data
